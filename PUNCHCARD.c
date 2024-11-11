@@ -1,6 +1,6 @@
 /**
  * @author Sam K
- * @date October 8th, 2024
+ * @date November 11th, 2024
  * @name PUNCHCARD
  *
  * @details A simple terminal program meant to simplify calculating work-hours
@@ -10,9 +10,11 @@
  * and determines the hours worked, assuming the hours worked are less than 24
  * and that the start and end times are always in the order start - end, such
  * that working from 8:00pm-7:59pm is a valid input, suggesting you worked 23
- * hours and 59 minutes. The program will continue to do this repeatedly until
- * stopped. You can stop the program with Ctrl + C, closing the window, or
- * entering the same start and end time.
+ * hours and 59 minutes. Multiple times for a single day may be entered at once,
+ * separated by commas, i.e. 9:00am-1:00pm, 2:00pm-4:30pm, 6:10pm-9:20pm. The
+ * program will continue to do this repeatedly until stopped. You can stop the
+ * program with Ctrl + C, closing the window, or entering the same start and end
+ * time.
  */
 
 // Libraries in use:
@@ -20,19 +22,35 @@
 
 // Functions
 /**
- * Skips past any unwanted characters between the start time and end time.
+ * Consumes any unwanted characters in the input buffer until finding the EOF, a
+ * newline, or the target character.
+ *
+ * @param target The target char to stop consuming characters after
+ * encountering.
+ *
+ * @return -1 if stopped by EOF, 1 if stopped by a newline, 0 if stopped by the
+ * target character, and 2 otherwise.
  */
-void skipBufferJunk() {
-    int temporary;
-    while ((temporary = getchar()) != '-' && temporary != EOF) {}
-}
+int clearBufferJunk(char target) {
+    /**
+     * The last character returned by getchar().
+     */
+    int lastCharacter;
 
-/**
- * Flushes the input buffer.
- */
-void cleanBuffer() {
-    int temporary;
-    while ((temporary = getchar()) != '\n' && temporary != EOF ) {}
+    // Consume characters from stdin until we encounter a stop condition.
+    while ((lastCharacter = getchar()) != target && lastCharacter != EOF &&
+           lastCharacter != '\n') {}
+
+    // Return an int signifying the reason for stopping.
+    if (lastCharacter == EOF) {
+        return -1;
+    } else if (lastCharacter == target && target != '\n') {
+        return 0;
+    } else if (lastCharacter == '\n') {
+        return 1;
+    } else {
+        return 2;
+    }
 }
 
 /**
@@ -40,15 +58,15 @@ void cleanBuffer() {
  * where HH is the hour, MM is the minute, and cc is the meridiem indicator
  * ("am" or "pm").
  *
- * @param hour A pointer to the int storing the hour for this time.
- * @param minute A pointer to the int storing the minute for this time.
- * @param meridiem A pointer to the char storing the meridiem indicator for
- *                 this time.
+ * @param hour     A pointer to the int storing the hour for this time.
+ * @param minute   A pointer to the int storing the minute for this time.
+ * @param meridiem A pointer to the char storing the meridiem indicator for this
+ *                 time.
  *
  * @return 0 if a valid time was read, -1 if something wasn't right with the
  *         read time.
  */
-int readTime(int* hour, int* minute, char* meridiem) {
+int readTime(int *hour, int *minute, char *meridiem) {
     // Scan the time in.
     scanf_s(" %d : %d %c", hour, minute, meridiem);
 
@@ -63,7 +81,7 @@ int readTime(int* hour, int* minute, char* meridiem) {
     if (*hour > 0 && *hour < 13 && *minute > -1 && *minute < 60 &&
         (*meridiem == 'a' || *meridiem == 'p')) {
         return 0;
-    // Else...
+        // Else...
     } else {
         // Print a message explaining what was wrong, return -1.
         if (*hour <= 0) {
@@ -93,18 +111,19 @@ int readTime(int* hour, int* minute, char* meridiem) {
 /**
  * Converts 12-hour time to 24-hour time, because it is easier to do math with.
  *
- * @param hour A pointer to the int storing the hour for the time to convert.
+ * @param hour     A pointer to the int storing the hour for the time to
+ *                 convert.
  * @param meridiem A pointer to the char storing the meridiem indicator for the
  *                 time to convert.
  */
-void toMilitaryTime(int* hour, const char* meridiem) {
+void toMilitaryTime(int *hour, const char *meridiem) {
     // If it's the 12th hour...
     if (*hour == 12) {
         // ...and the am, add 12 so 12am = 24:00/00:00.
         if (*meridiem == 'a') {
             *hour += 12;
         }
-    // Else...
+        // Else...
     } else {
         // ...if it's the pm, add 12.
         if (*meridiem == 'p') {
@@ -116,12 +135,12 @@ void toMilitaryTime(int* hour, const char* meridiem) {
 /**
  * Rounds the time difference to the nearest quarter-hour.
  *
- * @param hourDifference A pointer to the integer storing the hour portion of
- *                       the time spent working.
+ * @param hourDifference   A pointer to the integer storing the hour portion of
+ *                         the time spent working.
  * @param minuteDifference A pointer to the integer storing the minutes portion
  *                         of the time spent working.
  */
-void roundTime(int* hourDifference, int* minuteDifference) {
+void roundTime(int *hourDifference, int *minuteDifference) {
     // Round the minutes worked to the nearest multiple of 15.
     *minuteDifference = ((*minuteDifference + 7) / 15) * 15;
 
@@ -133,25 +152,27 @@ void roundTime(int* hourDifference, int* minuteDifference) {
 }
 
 /**
- * Gives the user a brief introduction, then prompts the user to enter their
- * start and end times. Calculates the hours worked, and presents the actual
- * work time as well as the rounded hours format. Repeats this process starting
- * from prompting the user until the program is stopped in some way or the user
- * enters the exact same start and end time.
+ * Reads an unspecified number of work start and end times separated by commas.
+ * Calculates the time between each and adds that time to the total being
+ * tracked for the day.
+ *
+ * @param totalHours   A pointer to the int storing the total hours worked for
+ *                     the day.
+ * @param totalMinutes A pointer to the int storing the total minutes worked for
+ *                     the day in excess of an hour.
+ *
+ * @return 1 if all times were successfully read, 0 if a time indicating the
+ * program should end was read, -1 if there was an issue reading any of the
+ * times.
  */
-int main(void) {
-    // Introduction
-    printf_s("\nWelcome to PUNCHCARD! This program is meant to help you "
-             "record your work hours\nas an employee. To get started, just "
-             "enter your start time and end time, in the\nformat "
-             "HH:MMcc-HH:MMcc. For example, if you worked from noon to 3pm "
-             "today, you'd\nenter 12:00pm-3:00pm. You can quit the program by "
-             "closing this window, pressing\nCtrl + C, or entering a start "
-             "time and end time that are identical (such as\n1:00pm-1:00pm)"
-             ".\n\n");
+int readTimesForDay(int *totalHours, int *totalMinutes) {
+    /**
+     * The return value of clearBufferJunk().
+     */
+    int endFound = 0;
 
-    // Until given a reason to stop...
-    while (1) {
+    // While we haven't hit the EOF or a newline...
+    while (endFound != 1 && endFound != -1) {
         // Declare our variables...
         /**
          * The hour work was started at (12-hour time).
@@ -196,31 +217,23 @@ int main(void) {
          */
         int minuteDifference;
 
-        /**
-         * The time spent working in hours, rounded to the nearest quarter-hour.
-         */
-        float roundedTime;
-
-        // Prompt the user.
-        printf_s("Enter your times:\n");
-
         // Read the start time. If something went wrong...
         if (readTime(&startHour, &startMinute, &startMeridiem) == -1) {
             // Clean the buffer and try again.
             printf_s("Something was wrong with your given start time!\n");
-            cleanBuffer();
-            continue;
+            clearBufferJunk('\n');
+            return -1;
         }
 
         // Skip anything particularly annoying between the two times.
-        skipBufferJunk();
+        clearBufferJunk('-');
 
         // Read the end time. If something went wrong...
         if (readTime(&endHour, &endMinute, &endMeridiem) == -1) {
             // Clean the buffer and try again.
             printf_s("Something was wrong with your given end time!\n");
-            cleanBuffer();
-            continue;
+            clearBufferJunk('\n');
+            return -1;
         }
 
         // Print the times read back, for confirmation/debugging reasons.
@@ -231,9 +244,10 @@ int main(void) {
 
         // If the start time and end time are identical...
         if (startHour == endHour && startMinute == endMinute && startMeridiem
-            == endMeridiem) {
+                                                                ==
+                                                                endMeridiem) {
             // Stop the program, we're done here.
-            break;
+            return 0;
         }
 
         // Convert both times to 24-hour time.
@@ -241,7 +255,7 @@ int main(void) {
         toMilitaryTime(&endHour, &endMeridiem);
 
         // Calculate the difference
-        hourDifference = endHour - startHour;
+        hourDifference   = endHour - startHour;
         minuteDifference = endMinute - startMinute;
 
         // If the minutes are less than 0...
@@ -257,17 +271,88 @@ int main(void) {
             hourDifference += 24;
         }
 
+        // Add to the total for today.
+        *totalMinutes += minuteDifference;
+        *totalHours += hourDifference;
+
+        // If we have enough minutes saved for an hour, convert to an hour.
+        if (*totalMinutes >= 60) {
+            *totalMinutes -= 60;
+            *totalHours += 1;
+        }
+
         // Print the time worked.
         printf_s("ACTUAL TIME:\t%02d hours and %02d minutes.\n", hourDifference,
                  minuteDifference);
 
-        // Round to the nearest quarter-hour and print.
-        roundTime(&hourDifference, &minuteDifference);
-        roundedTime = ((float) minuteDifference / 60) + (float) hourDifference;
-        printf_s("ROUNDED TIME:\t%0.2f hours.\n\n", roundedTime);
+        // Move to the next time if possible.
+        endFound = clearBufferJunk(',');
+    }
+    return 1;
+}
 
-        // Clean the buffer before the next iteration.
-        cleanBuffer();
+/**
+ * Gives the user a brief introduction, then prompts the user to enter their
+ * start and end times. Calculates the hours worked, and presents the actual
+ * work time as well as the rounded hours format. Repeats this process starting
+ * from prompting the user until the program is stopped in some way or the user
+ * enters the exact same start and end time.
+ */
+int main(void) {
+    // Introduction
+    printf_s("Welcome to PUNCHCARD! This program is meant to help you record "
+             "your work hours\nas an employee. To get started, just enter your "
+             "start time and end time, in the\nformat HH:MMcc-HH:MMcc. For "
+             "example, if you worked from noon to 3pm today, you'd\nenter "
+             "12:00pm-3:00pm. You can enter multiple times like this separated "
+             "by\ncommas, just make sure they're all for the same day. They "
+             "will first be summed,\nthen rounded. You can quit the program by "
+             "closing this window, pressing Ctrl +\nC, or entering a start time"
+             " and end time that are identical (such as 1:00pm-\n1:00pm).\n\n");
+
+    /**
+     * Whether or not to continue running.
+     */
+    int continueRunning = 1;
+
+    // Until given a reason to stop...
+    while (continueRunning) {
+        /**
+         * The time spent working in hours, rounded to the nearest quarter-hour.
+         */
+        float roundedTime;
+
+        /**
+         * The total hours worked this day.
+         */
+        int totalHours = 0;
+
+        /**
+         * The total minutes worked this day excess of an hour.
+         */
+        int totalMinutes = 0;
+
+        // Prompt the user.
+        printf_s("Enter your times for today separated by commas:\n");
+
+        // Read and sum the times worked for today
+        continueRunning = readTimesForDay(&totalHours, &totalMinutes);
+
+        // If we had issues reading one of the times, try again.
+        if (continueRunning == -1) {
+            continueRunning = 1;
+            continue;
+        }
+
+        // Print the time worked for the day.
+        printf_s("\n\nACTUAL TOTAL TIME:\t%02d hours and %02d minutes.\n",
+                 totalHours,
+                 totalMinutes);
+
+        // Round to the nearest quarter-hour and print.
+        roundTime(&totalHours, &totalMinutes);
+        roundedTime = ((float) totalMinutes / 60) + (float) totalHours;
+        printf_s("ROUNDED TOTAL TIME:\t%0.2f hours.\n\n", roundedTime);
     }
 
     // Finish the program.
