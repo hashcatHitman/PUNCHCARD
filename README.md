@@ -6,6 +6,7 @@ program takes a start time and end time separated by a hyphen and determines the
 hours worked, assuming the hours worked are less than 24 and that the start and
 end times are always in the order start - end, such that working from
 8:00pm-7:59pm is a valid input, suggesting you worked 23 hours and 59 minutes.
-The program will continue to do this repeatedly until stopped. You can stop the
-program with Ctrl + C, closing the window, or entering the same start and end
-time.
+Multiple times for a single day may be entered at once, separated by commas,
+i.e. 9:00am-1:00pm, 2:00pm-4:30pm, 6:10pm-9:20pm. The program will continue to
+do this repeatedly until stopped. You can stop the program with Ctrl + C,
+closing the window, or entering the same start and end time.
