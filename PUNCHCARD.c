@@ -1,8 +1,22 @@
 /**
- * @author Sam K
- * @date November 11th, 2024
- * @name PUNCHCARD
- *
+ * PUNCHCARD - A command-line utility for determining self-reported work hours.
+ * Copyright (C) 2025  Sam K
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>. 
+ */
+
+/**
  * @details A simple terminal program meant to simplify calculating work-hours
  * calculations for employees. At the time of writing, employees are required to
  * round their worked hours to the nearest quarter-hour (X.00, X.25, X.50, X.75,
